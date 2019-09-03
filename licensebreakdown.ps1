@@ -11,11 +11,9 @@ $CSVpath = "UserLicenseReport.csv"
         $licenseString = $licenseArray -join ", "
         Write-Host "$($user.displayname) has $licenseString" -ForegroundColor Blue
         $licensedSharedMailboxProperties = [pscustomobject][ordered]@{
-            CustomerName      = $customer.Name
             DisplayName       = $user.DisplayName
             Licenses          = $licenseString
-            TenantId          = $customer.TenantId
             UserPrincipalName = $user.UserPrincipalName
         }
         $licensedSharedMailboxProperties | Export-CSV -Path $CSVpath -Append -NoTypeInformation   
-	}
+}
