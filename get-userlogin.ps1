@@ -1,29 +1,60 @@
-#https://thesysadminchannel.com/get-azure-ad-last-login-date-and-sign-in-activity/
-#Import a CSV of migration waves to export a report of who has and has not logged in
+#foundation: https://thesysadminchannel.com/get-azure-ad-last-login-date-and-sign-in-activity/
+#progressbar: https://communary.net/2015/01/19/how-to-add-a-progress-bar-to-your-powershell-script/
 
-Write-host "Be sure to run Connect-AzureAD first!!!"
+$checkexg = Get-Organizationrelationship
+if ($checkexg -ne $null){
 
-$checkconn = Get-AzureADTenantDetail
+#--------- select a batch
+Write-host "Loading migration waves, please select a number to continue"
+
+$services = Get-MigrationBatch
+$menu = @{}
+for ($i=1;$i -le $services.count; $i++) 
+{ Write-Host "$i. $($services[$i-1].identity),$($services[$i-1].totalcount)" 
+$menu.Add($i,($services[$i-1].name))}
+
+[int]$ans = Read-Host 'Enter selection'
+$selection = [string]$services[$ans-1].identity
+Write-host "Selecting wave $selection"
+$selectiontype = Get-migrationbatch -Identity $selection
+
+Write-host "You selected $selectiontype" -backgroundcolor Cyan -ForegroundColor Black
+$userlist = get-migrationuser -batchid $selection | select Identity
+
+Pause
+
+
+
+$checkconn = Get-AzureADAuditDirectoryLogs -top 1
 If ($checkconn -ne $null){
-
-$upnlist = Import-csv "wave6-output.csv"
-$outputfile = "wave6-usersignin.txt"
+Write-host "Connected to Azure AD Powershell, continuing" -BackgroundColor Cyan -ForegroundColor Black
+$upnlist = $userlist
+$outputfile = "$selection-usersignin.txt"
 
 foreach ($User in $UPNList) {
-	$user1 = $($user.identity)
-	Write-host "Processing $user1"
-    	$arr = Get-AzureADAuditSignInLogs -Filter "UserPrincipalName eq '$user1'" -Top 1 | select CreatedDateTime,  UserPrincipalName, IsInteractive, AppDisplayName, IpAddress, TokenIssuerType, @{Name = 'DeviceOS'; Expression = {$_.DeviceDetail.OperatingSystem}}
+
+$counter++
+Write-Progress -Activity 'Processing Users' -CurrentOperation $user -PercentComplete (($counter / $UPNList.count) * 100)
+
+$user1 = $($user.identity)
+$arr = Get-AzureADAuditSignInLogs -Filter "UserPrincipalName eq '$user1'" -Top 1 | select CreatedDateTime,  UserPrincipalName, IsInteractive, AppDisplayName, IpAddress, TokenIssuerType, @{Name = 'DeviceOS'; Expression = {$_.DeviceDetail.OperatingSystem}}
 	If ($arr -ne $null){
 	$arruser = $arr.userprincipalname
 	$arrtime = $arr.createddatetime
-	$arrout = "$arruser logged in at $arrtime"
-	$arrout | Out-file $outputfile -append}else
-	{$arr = "No signin found for $user1"
-	$arr | Out-file $outputfile -append}
-	Clear-Variable $user1
-	Clear-Variable $arr
-	Clear-Variable $arrout
-	Start-Sleep -Milliseconds 250
+	$arrout = "$arruser, $arrtime"
+	$arrout | out-file $outputfile -append
+	Write-host $arrout -backgroundcolor green -foregroundcolor black
+	Clear-Variable $user1 -ErrorAction SilentlyContinue
+	Clear-Variable $arr -ErrorAction SilentlyContinue
+	Clear-Variable $arrout -ErrorAction SilentlyContinue}
+	else
+	{$arrout = "$user1, null"
+	$arrout | out-file $outputfile -append
+	write-host $arrout -backgroundcolor red -foregroundcolor white}
+
+Start-Sleep -Milliseconds 500
 }
-#let the user
-}else{Write-host "You are not connected to AzureAD, please retry" -ForegroundColor Yellow}
+#let the user know they dont have a connection
+}else{Write-host "You are not connected to AzureAD Powershell or do not have the AzureAD Preview module installed, please retry" -ForegroundColor Yellow}
+
+}else{Write-host "You are not connected to Exchange Online Powershell, please retry" -ForegroundColor Yellow}
