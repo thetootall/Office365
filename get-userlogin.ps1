@@ -52,7 +52,7 @@ $arr = Get-AzureADAuditSignInLogs -Filter "UserPrincipalName eq '$user1'" -Top 1
 	$arrout | out-file $outputfile -append
 	write-host $arrout -backgroundcolor red -foregroundcolor white
 	#we need to add an extra timeout so we dont get a 429 Too Many Requests
-	Start-Sleep -Milliseconds 250}
+	Start-Sleep -Milliseconds 500}
 
 Start-Sleep -Milliseconds 500
 }
