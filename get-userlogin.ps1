@@ -88,18 +88,27 @@ $arr = Get-AzureADAuditSignInLogs -Filter "UserPrincipalName eq '$user1'" -Top 1
 	$arrtime = $arr.createddatetime
 	$arrout = "$arruser, $arrtime, $mfamethod"
 	$arrout | out-file $outputfile -append
-	Write-host $arrout -backgroundcolor green -foregroundcolor black
-	Clear-Variable $user1 -ErrorAction SilentlyContinue
-	Clear-Variable $arr -ErrorAction SilentlyContinue
-	Clear-Variable $arrout -ErrorAction SilentlyContinue}
+	Write-host $arrout -backgroundcolor green -foregroundcolor black}
 	else
-	{$arrout = "$user1, null, $mfamethod"
+    #adding one more if/then for users who truly have no MFA setup
+	{if($mfamethod -eq "<no mfa setup>"){
+    $arrout = "$user1, null, $mfamethod"
 	$arrout | out-file $outputfile -append
-	write-host $arrout -backgroundcolor red -foregroundcolor white
+	write-host $arrout -backgroundcolor red -foregroundcolor white}else{
+    $arrout = "$user1, null, $mfamethod"
+	$arrout | out-file $outputfile -append
+	write-host $arrout -backgroundcolor green -foregroundcolor black}
     #we need to add an extra timeout so we dont get a 429 Too Many Requests
     Start-Sleep -Milliseconds 1000}
-    Start-Sleep -Milliseconds 1000
     #end CSVLOOP
-    }
+
+#add a sleep to avoid 429 Too Many Requests
+Start-Sleep -Milliseconds 1000
+Clear-Variable user1 -ErrorAction SilentlyContinue
+Clear-Variable arr -ErrorAction SilentlyContinue
+Clear-Variable arrout -ErrorAction SilentlyContinue
+Clear-Variable mfamethod -ErrorAction SilentlyContinue
+Clear-Variable mfainfo -ErrorAction SilentlyContinue
+}
 #End the AAD Userloop
 
